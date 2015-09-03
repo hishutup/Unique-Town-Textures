@@ -1,0 +1,19 @@
+sMissingFile=You are missing required files. Please reinstall UTT's "Edit Scripts" folder.
+sWelcome=Starting Unique Town Textures
+sScriptVer=Script Version: 
+sIniVer=INI Version: 
+
+sIntroGUI=Starting GUI
+sInvalidTextureDirectory=Textures Folder Not Found
+sDisplayGUI=Displaying GUI
+
+sTitle=Unique Town Textures
+sDetails=Detailed Information 
+sCurrentPluginFile=Current Plugin File: 
+sCurrentWorkingDirectiory=Current Working Directiory:
+sCurrentAssetDirectory=Current Asset Directiory:  
+sSelectLocationsToAffect=Select the locations that you want to affect
+sDebugOptions=Debugging Options
+sSomeDebugRunOnStart=Some options run before the GUI is created
+
+sFailedOnRefeshINI=Something went wrong when trying to deleting: 
