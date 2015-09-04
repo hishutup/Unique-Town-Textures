@@ -15,5 +15,10 @@ sCurrentAssetDirectory=Current Asset Directiory:
 sSelectLocationsToAffect=Select the locations that you want to affect
 sDebugOptions=Debugging Options
 sSomeDebugRunOnStart=Some options run before the GUI is created
+sGUIErrorFindWorld=Unable to find the Worldspace
+sGUIErrorFindLocation=Unable to find the Location in the worldspace
+sRevertAll=Revert all
+sDiscard=Discard
+sSave=Save
 
 sFailedOnRefeshINI=Something went wrong when trying to deleting: 
