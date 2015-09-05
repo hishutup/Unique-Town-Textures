@@ -46,12 +46,13 @@ Future plans
 Affected Cells is what is going to be used to cache meshes list
    
 }
-unit userscript;
+unit UTTMain;
 uses mteFunctions;
 uses __HishyFunctions;
+uses 'UTT\lib\UTTFunctions';
 uses 'UTT\lib\FileHandling';
 uses 'UTT\lib\GUI';
-uses 'UTT\lib\UTTFunctions';
+uses 'UTT\lib\Prepare';
 
 const
   cVer='0.1';
@@ -68,6 +69,8 @@ const
   cLangFile=cWorkingPath+'Assets\english.lang';
   cGeneralSettings=cWorkingPath+'Settings\General.ini';
   cTextureCacheFile=cWorkingPath+'Cache\TextureCache.ini';
+  cCacheCheckSumFile=cWorkingPath+'Cache\FileCheckSums.txt';
+  cCacheFormIDsFile=cWorkingPath+'Cache\FormIDs.ini';
   cTexturePathsFile=cWorkingPath+'Settings\TexturePaths.ini';
   cCellRulesPath=cWorkingPath+'Rules\';
   
@@ -79,6 +82,7 @@ var
   bDoDebug: Boolean;
   iniSettings: TMemIniFile;
   lang: TStringList;
+  iRun: int;
   
 procedure InitialStartup;
 var
@@ -100,15 +104,9 @@ begin
     raise Exception.Create(lang.Values['sMissingFile']);
   FindClose(recRules);
   
-  //Create INI if doesnt exist
-  if not FileExists(cGeneralSettings) then 
-  begin
-    CreateDirectories(cGeneralSettings);
-    FileCreate(cGeneralSettings);
-    iniSettings := TMemIniFile.Create(cGeneralSettings);
-  end
-  else
-    iniSettings := TMemIniFile.Create(cGeneralSettings);
+  CreateFileIfMissing(cGeneralSettings);
+  CreateFileIfMissing(cCacheCheckSumFile);
+  CreateFileIfMissing(cCacheFormIDsFile);
   
   slAssets := TStringList.Create;
   for i := 0 to Pred(slAssets.Count) do
@@ -116,21 +114,18 @@ begin
     if FileExists(cWorkingPath+'Assets\'+slAssets[i]) then continue;
     raise Exception.Create(lang.Values['sMissingFile']);
   end;
+  slAssets.Free;
+  
+  iniSettings := TMemIniFile.Create(cGeneralSettings);
+  iniSettings.WriteString('General', 'PluginName', cPatchFile);
   
   //Update Ini
-  iniSettings.WriteString('General', 'PluginName', cPatchFile);
   UpdateSettingsBool(iniSettings,'Options', cOptionsNames);
   UpdateSettingsBool(iniSettings,'Debug', cDebugNames);
   
-  slAssets.Free;
 end;
 
-procedure FreeMemory;
-begin
-  lang.Free;
-  iniSettings.UpdateFile;
-  iniSettings.Free;
-end;
+
 
 procedure Introduction;
 begin
@@ -142,22 +137,20 @@ begin
   AddMessage('');
   AddMessage(cDashes);
 end;
-  
+
   
 function Initialize: integer;
 begin
   InitialStartup;
   Introduction;
   StartGUI;
-  
-  {SaveSettings;
-  if sScriptFailedReason <> '' then exit;
-  //Check to see if at least ONE town is selected.
-  sScriptFailedReason := 'No Options Selected, exiting';
-  for i := 0 to Pred(Length(TownData)) do begin
-    if TownData[i].DoLocation then sScriptFailedReason := '';
-  end;
-  if sScriptFailedReason <> '' then exit;
+  if iRun = 0 then 
+    raise Exception.Create(lang.Values['sSelectAtLeasetOneLocation'])
+  else if iRun = -1 then 
+    exit;
+    
+  GatherRecords;
+  {
   FindRecords;
   if sScriptFailedReason <> '' then exit;
   //FindMeshes;
@@ -172,5 +165,12 @@ function Finalize: integer;
 begin
   FreeMemory;
 end;
+
+procedure FreeMemory;
+begin
+  lang.Free;
+  iniSettings.UpdateFile;
+  iniSettings.Free;
+end; 
 
 end.

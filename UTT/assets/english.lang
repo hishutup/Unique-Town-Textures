@@ -24,3 +24,4 @@ sInvalidPath=Invalid Path or Empty Path
 sSelectDir=Select a directory
 
 sFailedOnRefeshINI=Something went wrong when trying to deleting: 
+sSelectAtLeasetOneLocation=You MUST select at least one location to process the location(s)

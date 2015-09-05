@@ -1,15 +1,10 @@
 unit GUI;
 uses mteFunctions;
 uses 'UTT\lib\FileHandling';
-{
-Delete ini and save fresh
-}
-const
-  cDebugParam='doDebugGUI';
   
 var
   slDebug, slOptions: TStringList;
-  bDoDebug, bBusy: Boolean;
+  bDoDebugGUI, bBusy: Boolean;
   sTextureAssetsList: String;
   picGear, picFolder, picUndo, picError, picCheck, picReset: TPicture;
   iniAssetPaths, iniEnabledLocations: TMemIniFile;
@@ -28,14 +23,14 @@ var
 
 procedure Debug_Message(s: string);
 begin
-  if bDoDebug then AddMessage(s);
+  if bDoDebugGUI then AddMessage(s);
 end;
 
 procedure Debug_DebugData(sLabel: string; sl: TStringList);
 var
   i: int;
 begin
-  if not bDoDebug then exit;
+  if not bDoDebugGUI then exit;
   AddMessage('Reading '+sLabel+' data');
   for i := 0 to Pred(sl.Count) do
     AddMessage(Inden(2)+sl[i]);
@@ -76,19 +71,6 @@ procedure Startup;
 var
   i: int;
 begin
-  if not FileExists(cTextureCacheFile) then 
-  begin
-    CreateDirectories(cTextureCacheFile);
-    FileClose(FileCreate(cTextureCacheFile));
-  end;
-  
-  if not FileExists(cTexturePathsFile) then
-    FileClose(FileCreate(cTexturePathsFile));
-  
-  if not FileExists(cEnabledLocationsFile) then 
-    FileClose(FileCreate(cEnabledLocationsFile));
-    
-    
   slDebug := TStringList.Create;
   slOptions := TStringList.Create;
   picGear := TPicture.Create;
@@ -108,7 +90,7 @@ end;
 
 procedure LoadSettings;
 begin
-  bDoDebug := StrToBool(iniSettings.ReadString('Debug', cDebugParam, 'False'));
+  bDoDebugGUI := StrToBool(iniSettings.ReadString('Debug', 'doDebugGUI', 'False'));
   iniSettings.ReadSectionValues('Debug',slDebug);
   iniSettings.ReadSectionValues('Options',slOptions);
   
@@ -158,7 +140,7 @@ begin
   slSections.Free;
   end;
 
-  if bDoDebug then Debug_ReadTownData;
+  if bDoDebugGUI then Debug_ReadTownData;
 end;
 
 procedure FillTownPaths;
@@ -197,7 +179,7 @@ begin
       iniAssetPaths.WriteString(slWorldSpace[iWorldSpaceIndex], arrayTownLocations[iWorldSpaceIndex].Strings[iLocationIndex], arrayTownPaths[iWorldSpaceIndex, iLocationIndex]);
   end;
   iniAssetPaths.UpdateFile;
-  if bDoDebug then Debug_ReadTownPaths;
+  if bDoDebugGUI then Debug_ReadTownPaths;
 end;
 
 procedure ofrm.CheckStatus(sender: TObject);
@@ -553,13 +535,17 @@ begin
             begin
               if not pnlMasterWorld[iPanel].Components[iCompon+1].Components[i].Enabled then continue;
               if pnlMasterWorld[iPanel].Components[iCompon+1].Components[i].Checked then
-                bOne := True
+              begin
+                bOne := True;
+              end
               else
+              begin
                 bAll := False;
+              end;
             end;
           end;
         end;
-        if bAll then
+        if bAll AND bOne then
         begin 
           pnlMasterWorld[iPanel].Components[iCompon].AllowGrayed := False;
           pnlMasterWorld[iPanel].Components[iCompon].State := cbChecked;
@@ -583,7 +569,7 @@ end;
 
 procedure LocationInfo(sb: TScrollBox);
 var
-  bTemp, bVisible: Boolean;
+  bVisible: Boolean;
   i, j, iSpacing: int;
   
   lblWorldSpace: Array[0..255] of TLabel;
@@ -618,11 +604,16 @@ begin
     
     
     for j := 0 to Pred(arrayTownLocations[i].Count) do
-    begin
-      bTemp := StrToBool(iniEnabledLocations.ReadString(slWorldSpace[i],arrayTownLocations[i].Strings[j],'False'));
-      cbMasterLocations[i,j] := cCheckBox(pnlLocation[i], pnlLocation[i], (20*j)+5, 25, 90, arrayTownLocations[i].Strings[j], bTemp, '');
-      cbMasterLocations[i,j].Enabled := DirContainsFiles(arrayTownPaths[i,j], cRecuriveDepth);
-      cbMasterLocations[i,j].OnClick := UpdateCheckBoxStatus;
+    begin;
+      cbMasterLocations[i,j] := TCheckBox.Create(pnlLocation[i]);
+        cbMasterLocations[i,j].Parent := pnlLocation[i];
+        cbMasterLocations[i,j].Top := (20*j)+5;
+        cbMasterLocations[i,j].Left := 25;
+        cbMasterLocations[i,j].Caption := arrayTownLocations[i].Strings[j];
+        cbMasterLocations[i,j].Enabled := DirContainsFiles(arrayTownPaths[i,j], cRecuriveDepth);
+        cbMasterLocations[i,j].Checked := StrToBool(iniEnabledLocations.ReadString(slWorldSpace[i],arrayTownLocations[i].Strings[j],'False')) AND cbMasterLocations[i,j].Enabled;
+        cbMasterLocations[i,j].OnClick := UpdateCheckBoxStatus;
+        
       lblMasterLocations[i, j] := cLabel(pnlLocation[i], pnlLocation[i], cbMasterLocations[i,j].Top, cbMasterLocations[i,j].Left+cbMasterLocations[i,j].Width+15, 0, 120, '\UTT'+GetLastFolder(arrayTownPaths[i,j]), '');
       
       
@@ -684,6 +675,7 @@ var
   
   cbDebug: Array[0..255] of TCheckBox;
 begin
+  
   AddMessage(Lang.Values['sDisplayGUI']);
   frm := TForm.Create(nil);
     frm.Caption := Lang.Values['sTitle'];
@@ -771,6 +763,8 @@ begin
         begin
           iniAssetPaths.WriteString(slWorldSpace[i], arrayTownLocations[i].Strings[j], arrayTownPaths[i,j]);
           iniEnabledLocations.WriteString(slWorldSpace[i], arrayTownLocations[i].Strings[j], BoolToStr(cbMasterLocations[i,j].Checked));
+          if cbMasterLocations[i,j].Checked OR (iRun = 1) then 
+            iRun := 1;
         end;
       end;
       
@@ -785,11 +779,14 @@ begin
       iniAssetPaths.UpdateFile;
       iniSettings.UpdateFile;
       iniEnabledLocations.UpdateFile;
-    end;
+    end
+    else if frm.ModalResult = mrCancel then
+      iRun := -1;
+      
   frm.Free;  
 end;
 
-procedure FreeMemory;
+procedure FreeMemoryGUI;
 var
   i: int;
 begin
@@ -817,10 +814,7 @@ begin
   FillTownData;
   FillTownPaths;
   CreateGUI;
-  
-  
-  //SaveSettings;
-  FreeMemory;
+  FreeMemoryGUI;
 end;
 
 end.

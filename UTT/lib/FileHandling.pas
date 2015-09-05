@@ -1,6 +1,20 @@
 unit UTTFileHandling;
 
-procedure UpdateSettingsBool(var ini: TMemIniFile; sSec, sValue: String);
+procedure CreateFileIfMissing(sFilePath: string);
+begin
+  try
+    if not FileExists(sFilePath) then
+    begin
+      CreateDirectories(sFilePath);
+      FileCreate(sFilePath);
+    end;
+  except
+    on x: exception do
+      raise Excption.Create(X.Message);
+  end;
+end;
+
+procedure UpdateSettingsBool(ini: TMemIniFile; sSec, sValue: String);
 var
   slNew, slOld: TStringList;
   i: Int;
@@ -41,19 +55,43 @@ begin
         else
           sl.Append(sPath+searchResult.Name);
     until FindNext(searchResult) <> 0;
-  FindClose(searchResult);
   end;
+  FindClose(searchResult);
 end;
 
 function DirContainsFiles(sPath: string; iDepth: int): Boolean;
 var
-  sl: TStringList;
+  i: int;
+  searchResult: TSearchRec;
+  asPath: string;
 begin
   Result := False;
-  sl := TStringList.Create;
-  FindFiles(sPath, iDepth, sl);
-  if sl.Count <> 0 then Result := True;
-  sl.Free;
+  if iDepth <= 0 then exit;
+  if Copy(sPath,Length(sPath),1) <> '\' then
+    sPath := sPath+'\';
+  asPath := sPath+'*';
+  if FindFirst(asPath, faAnyFile, searchResult) = 0 then
+  begin
+    repeat
+      if not ((searchResult.Name = '.') OR (searchResult.Name = '..')) then
+        if (searchResult.attr and faDirectory) = faDirectory then
+        begin
+          if DirContainsFiles(sPath+searchResult.Name, iDepth-1) then
+          begin
+            Result := True;
+            FindClose(searchResult);
+            exit;
+          end;
+        end
+        else
+        begin
+          Result := True;
+          FindClose(searchResult);
+          exit;
+        end;
+    until FindNext(searchResult) <> 0;
+  end;
+  FindClose(searchResult);
 end;
 
 function GetLastFolder(sPath: string): string;
