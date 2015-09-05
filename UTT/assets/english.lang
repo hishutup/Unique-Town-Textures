@@ -20,5 +20,7 @@ sGUIErrorFindLocation=Unable to find the Location in the worldspace
 sRevertAll=Revert all
 sDiscard=Discard
 sSave=Save
+sInvalidPath=Invalid Path or Empty Path
+sSelectDir=Select a directory
 
 sFailedOnRefeshINI=Something went wrong when trying to deleting: 

@@ -12,6 +12,7 @@ var
   bDoDebug, bBusy: Boolean;
   sTextureAssetsList: String;
   picGear, picFolder, picUndo, picError, picCheck, picReset: TPicture;
+  iniAssetPaths, iniEnabledLocations: TMemIniFile;
   
   slWorldSpace: TStringList;//List of worldspaces
   arrayTownLocations: Array[0..255] of TStringList;//Hold the towns for each WorldSpace
@@ -21,6 +22,7 @@ var
   pnlMasterWorld: Array[0..255] of TPanel;
   cbMasterLocations: Array[0..255,0..255] of TCheckBox;
   lblMasterLocations: Array[0..255,0..255] of TLabel;
+  cbMasterWorld: Array[0..255] of TCheckBox;
   
   
 
@@ -65,7 +67,7 @@ begin
     begin
       AddMessage(Inden(4)+arrayTownPaths[i,j]);
       AddMessage(Inden(6)+GetLastFolder(arrayTownPaths[i,j]));
-      if DirContainsFiles(arrayTownPaths[i,j], 6) then AddMessage(Inden(6)+'Contains files.');
+      if DirContainsFiles(arrayTownPaths[i,j], cRecuriveDepth) then AddMessage(Inden(6)+'Contains files.');
     end;
   end;
 end;
@@ -95,6 +97,9 @@ begin
   picError := TPicture.Create;
   picCheck := TPicture.Create;
   picReset := TPicture.Create;
+ 
+  iniAssetPaths := TMemIniFile.Create(cTexturePathsFile);
+  iniEnabledLocations := TMemIniFile.Create(cEnabledLocationsFile);
   
   slWorldSpace := TStringList.Create;
   for i := 0 to Pred(Length(arrayTownLocations)) do
@@ -160,9 +165,7 @@ procedure FillTownPaths;
 var
   iWorldSpaceIndex, iLocationIndex, i: int;
   sCurrentWorldSpace, sCurrentLocation, sPath, sDefaultPath: string;
-  iniAssetPaths: TMemIniFile;
 begin
-  iniAssetPaths := TMemIniFile.Create(cTexturePathsFile);
   for iWorldSpaceIndex := 0 to Pred(slWorldSpace.Count) do 
   begin
     sCurrentWorldSpace : = slWorldSpace[iWorldSpaceIndex];
@@ -191,13 +194,9 @@ begin
   for iWorldSpaceIndex := 0 to Pred(slWorldSpace.Count) do
   begin
     for iLocationIndex := 0 to Pred(arrayTownLocations[iWorldSpaceIndex].Count) do 
-    begin
       iniAssetPaths.WriteString(slWorldSpace[iWorldSpaceIndex], arrayTownLocations[iWorldSpaceIndex].Strings[iLocationIndex], arrayTownPaths[iWorldSpaceIndex, iLocationIndex]);
-      AddMessage(slWorldSpace[iWorldSpaceIndex]+arrayTownLocations[iWorldSpaceIndex].Strings[iLocationIndex]+arrayTownPaths[iWorldSpaceIndex, iLocationIndex]);
-    end;
   end;
   iniAssetPaths.UpdateFile;
-  iniAssetPaths.Free;
   if bDoDebug then Debug_ReadTownPaths;
 end;
 
@@ -205,17 +204,10 @@ procedure ofrm.CheckStatus(sender: TObject);
 var
   i, j: int;
 begin
-  AddMessage('Checking Status');
-  if DirContainsFiles(sender.Owner.Components[1].Caption,6) then
-  begin
-    sender.Owner.Components[4].Picture := picCheck;
-    AddMessage('Good path');
-  end
+  if DirContainsFiles(sender.Owner.Components[1].Caption,cRecuriveDepth) then
+    sender.Owner.Components[4].Picture := picCheck
   else
-  begin
     sender.Owner.Components[4].Picture := picError;
-    AddMessage('Bad path');
-  end;
 end;
 
 procedure ofrm.Undo(sender: TObject);
@@ -239,7 +231,7 @@ begin
   else if not (sCurrentPath = sDefaultPath) then 
     sender.Owner.Components[1].Caption := sRecordedPath;
   
-  if DirContainsFiles(sender.Owner.Components[1].Caption,6) then
+  if DirContainsFiles(sender.Owner.Components[1].Caption,cRecuriveDepth) then
     sender.Owner.Components[4].Picture := picCheck
   else
     sender.Owner.Components[4].Picture := picError;
@@ -250,18 +242,17 @@ var
   sTemp: string;
   i: int;
 begin
-  AddMessage('Showing Assets Menu');
   sTemp := sender.Owner.Components[0].Caption;
-  sTemp := SelectDirectory('Select a directory', cTexturesPath, sTemp, nil);
+  sTemp := SelectDirectory(Lang.Values['sSelectDir'], cTexturesPath, sTemp, nil);
   if sTemp = '' then exit;
   sTemp := AppendIfMissing(sTemp,'\');
-  if DirContainsFiles(sTemp,6) then
+  if DirContainsFiles(sTemp,cRecuriveDepth) then
   begin
     sender.Owner.Components[1].Caption := sTemp;
     sender.Owner.Components[4].Picture := picCheck;
   end
   else
-    AddMessage('Invalid Path or Empty Path');
+    AddMessage(Lang.Values['sInvalidPath']);
 end;
 
 procedure ofrm.RevertAllPaths(sender: TObject);
@@ -280,7 +271,7 @@ begin
         if not (sender.Owner.Components[i].Components[j].Components[x].ClassName = 'TLabel') then continue;
         AddMessage(sender.Owner.Components[i].Components[j].Components[x+1].Caption);
         sender.Owner.Components[i].Components[j].Components[x+1].Caption := cTexturesPath+Copy(sender.Owner.Components[i].Components[j].Components[x].Caption,1,Pos(':',sender.Owner.Components[i].Components[j].Components[x].Caption)-1)+'\';
-        if DirContainsFiles(sender.Owner.Components[i].Components[j].Components[x+1].Caption,6) then
+        if DirContainsFiles(sender.Owner.Components[i].Components[j].Components[x+1].Caption,cRecuriveDepth) then
           sender.Owner.Components[i].Components[j].Components[x+4].Picture := picCheck
         else
           sender.Owner.Components[i].Components[j].Components[x+4].Picture := picError;
@@ -414,7 +405,7 @@ begin
           imgStatus[i,j].Height := 20;
           imgStatus[i,j].Width := 20;
           imgStatus[i,j].OnClick := CheckStatus;
-        if DirContainsFiles(lblLocationPath[i,j].Caption,6) then
+        if DirContainsFiles(lblLocationPath[i,j].Caption,cRecuriveDepth) then
           imgStatus[i,j].Picture := picCheck
         else
           imgStatus[i,j].Picture := picError;
@@ -463,13 +454,15 @@ begin
       begin
         arrayTownPaths[i,j] := lblLocationPath[i,j].Caption;
         lblMasterLocations[i,j].Caption := '\UTT'+GetLastFolder(arrayTownPaths[i,j]);
-        cbMasterLocations[i,j].Enabled := DirContainsFiles(arrayTownPaths[i,j],6);
+        cbMasterLocations[i,j].Enabled := DirContainsFiles(arrayTownPaths[i,j],cRecuriveDepth);
         bVisible := cbMasterLocations[i,j].Enabled OR bVisible;
       end;
       
       pnlMasterWorld[i].Visible := bVisible;
       bVisible := False;
     end;
+    
+    SetMasterWorldPanelSpacing;
   end;
   
   ofrm.Free;
@@ -493,8 +486,6 @@ begin
   bBusy := True;
   for i := 0 to Pred(sender.Owner.Components[1].ComponentCount) do
   begin
-    //AddMessage(sender.Owner.Components[1].Components[i].ClassName);
-    //AddMessage(sender.Owner.Components[1].Components[i].Caption);
     if sender.Owner.Components[1].Components[i].ClassName = 'TLabel' then continue;
     if sender.Checked then
       sender.Owner.Components[1].Components[i].Checked := True AND sender.Owner.Components[1].Components[i].Enabled
@@ -505,35 +496,87 @@ begin
   bBusy := False;
 end;
 
-procedure LocationOnClick(sender: TObject);
+procedure SetMasterWorldPanelSpacing;
 var
-  bOne, bAll: Boolean;
-  i: int;
+  bFirst: Boolean;
+  i, iScrollTemp: int;
+  cSpacing: Cardinal;
+begin
+  bFirst := True;
+  for i := 0 to Pred(Length(pnlMasterWorld)) do
+  begin
+    if not Assigned(pnlMasterWorld[i]) then continue;
+    if not pnlMasterWorld[i].Visible then continue;
+    
+    iScrollTemp := pnlMasterWorld[i].Owner.VertScrollBar.Position;
+    pnlMasterWorld[i].Owner.VertScrollBar.Position := 0;
+    
+    if bFirst then
+    begin
+      pnlMasterWorld[i].Top := 0;
+      cSpacing := pnlMasterWorld[i].Height;
+      bFirst := False;
+    end
+    else
+    begin
+      pnlMasterWorld[i].Top := cSpacing;
+      cSpacing := cSpacing + pnlMasterWorld[i].Height;
+    end;
+    
+    if iScrollTemp <= cSpacing then 
+      pnlMasterWorld[i].Owner.VertScrollBar.Position := iScrollTemp
+    else
+      pnlMasterWorld[i].Owner.VertScrollBar.Position := 0;
+  end;
+end;
+
+procedure ofrm.UpdateCheckBoxStatus;
+var
+  iPanel, iCompon, iWorldButton, i, j: int;
+  bAll, bOne: Boolean;
 begin
   if bBusy then exit;
   bBusy := True;
-  bAll := True;
-  for i := 0 to Pred(sender.Owner.ComponentCount) do 
+  for iPanel := 0 to Pred(slWorldSpace.Count) do
   begin
-    if not sender.Owner.Components[i].ClassNameIs('TCheckBox') then continue;
-    if sender.Owner.Components[i].Checked then 
-      bOne := True
-    else if sender.Owner.Components[i].Enabled then
-      bAll := False;
-  end;
-      
-  if bOne AND not bAll then
-  begin
-    sender.Owner.Owner.Components[0].AllowGrayed := True;
-    sender.Owner.Owner.Components[0].State := cbGrayed;
-  end
-  else
-  begin
-    sender.Owner.Owner.Components[0].AllowGrayed := False;
-    if bAll then
-      sender.Owner.Owner.Components[0].State := cbChecked
-    else
-      sender.Owner.Owner.Components[0].State := cbUnchecked;
+    bAll := True;
+    bOne := False;
+    for iCompon := 0 to Pred(pnlMasterWorld[iPanel].ComponentCount) do
+    begin
+      if pnlMasterWorld[iPanel].Components[iCompon].ClassName = 'TCheckBox' then
+      begin
+        if pnlMasterWorld[iPanel].Components[iCompon+1].ClassName = 'TPanel' then
+        begin
+          for i := 0 to Pred(pnlMasterWorld[iPanel].Components[iCompon+1].ComponentCount) do
+          begin
+            if pnlMasterWorld[iPanel].Components[iCompon+1].Components[i].ClassName = 'TCheckBox' then
+            begin
+              if not pnlMasterWorld[iPanel].Components[iCompon+1].Components[i].Enabled then continue;
+              if pnlMasterWorld[iPanel].Components[iCompon+1].Components[i].Checked then
+                bOne := True
+              else
+                bAll := False;
+            end;
+          end;
+        end;
+        if bAll then
+        begin 
+          pnlMasterWorld[iPanel].Components[iCompon].AllowGrayed := False;
+          pnlMasterWorld[iPanel].Components[iCompon].State := cbChecked;
+        end
+        else if bOne then
+        begin
+          pnlMasterWorld[iPanel].Components[iCompon].AllowGrayed := True;
+          pnlMasterWorld[iPanel].Components[iCompon].State := cbGrayed;
+        end
+        else
+        begin
+          pnlMasterWorld[iPanel].Components[iCompon].AllowGrayed := False;
+          pnlMasterWorld[iPanel].Components[iCompon].State := cbUnchecked;
+        end;
+      end;
+    end;
+    
   end;
   bBusy := False;
 end;
@@ -541,35 +584,29 @@ end;
 procedure LocationInfo(sb: TScrollBox);
 var
   bTemp, bVisible: Boolean;
-  i, j: int;
-  iniEnabledLocations: TMemIniFile;
+  i, j, iSpacing: int;
   
   lblWorldSpace: Array[0..255] of TLabel;
-  cbWorld: Array[0..255] of TCheckBox;
   pnlLocation: Array[0..255] of TPanel;
 begin
-  iniEnabledLocations := TMemIniFile.Create(cEnabledLocationsFile);
   
   for i := 0 to Pred(slWorldSpace.Count) do
   begin
     pnlMasterWorld[i] := TPanel.Create(sb);
       pnlMasterWorld[i].Parent := sb;
-    if i = 0 then 
-      pnlMasterWorld[i].Top := 0
-    else
-      pnlMasterWorld[i].Top := pnlMasterWorld[i-1].Top+pnlMasterWorld[i-1].Height;
+      pnlMasterWorld[i].Top := 0;//Will set later via SetMasterWorldPanelSpacing;
       pnlMasterWorld[i].Left := 0;
       pnlMasterWorld[i].Height := (20*(arrayTownLocations[i].Count+1))+5;
       pnlMasterWorld[i].Width := sb.Width;
     
-    cbWorld[i] := TCheckBox.Create(pnlMasterWorld[i]);
-      cbWorld[i].Parent := pnlMasterWorld[i];
-      cbWorld[i].Top := 0;
-      cbWorld[i].Left := 5;
-      cbWorld[i].Height := 15;
-      cbWorld[i].Width := 140;
-      cbWorld[i].Caption := slWorldSpace[i];
-      cbWorld[i].OnClick := WorldOnClick;
+    cbMasterWorld[i] := TCheckBox.Create(pnlMasterWorld[i]);
+      cbMasterWorld[i].Parent := pnlMasterWorld[i];
+      cbMasterWorld[i].Top := 0;
+      cbMasterWorld[i].Left := 5;
+      cbMasterWorld[i].Height := 15;
+      cbMasterWorld[i].Width := 140;
+      cbMasterWorld[i].Caption := slWorldSpace[i];
+      cbMasterWorld[i].OnClick := WorldOnClick;
     
     pnlLocation[i] := TPanel.Create(pnlMasterWorld[i]);
       pnlLocation[i].Parent := pnlMasterWorld[i];
@@ -584,8 +621,8 @@ begin
     begin
       bTemp := StrToBool(iniEnabledLocations.ReadString(slWorldSpace[i],arrayTownLocations[i].Strings[j],'False'));
       cbMasterLocations[i,j] := cCheckBox(pnlLocation[i], pnlLocation[i], (20*j)+5, 25, 90, arrayTownLocations[i].Strings[j], bTemp, '');
-      cbMasterLocations[i,j].Enabled := DirContainsFiles(arrayTownPaths[i,j], 6);
-      cbMasterLocations[i,j].OnClick := LocationOnClick;
+      cbMasterLocations[i,j].Enabled := DirContainsFiles(arrayTownPaths[i,j], cRecuriveDepth);
+      cbMasterLocations[i,j].OnClick := UpdateCheckBoxStatus;
       lblMasterLocations[i, j] := cLabel(pnlLocation[i], pnlLocation[i], cbMasterLocations[i,j].Top, cbMasterLocations[i,j].Left+cbMasterLocations[i,j].Width+15, 0, 120, '\UTT'+GetLastFolder(arrayTownPaths[i,j]), '');
       
       
@@ -596,7 +633,8 @@ begin
     pnlMasterWorld[i].Visible := bVisible;
     bVisible := False;
   end;
-  iniEnabledLocations.Free;
+  UpdateCheckBoxStatus;
+  SetMasterWorldPanelSpacing;
 end;
 
 procedure frm.CheckAll(sender: TObject);
@@ -633,7 +671,7 @@ end;
 
 procedure CreateGUI;
 var
-  i: int;
+  i,j: int;
   
   frm: TForm;
   gbWindow, gbDetails, gbLocations, gbOptions, gbDebug: TGroupBox;
@@ -646,7 +684,7 @@ var
   
   cbDebug: Array[0..255] of TCheckBox;
 begin
-  AddMessage(Lang.Values['DisplayGUI']);
+  AddMessage(Lang.Values['sDisplayGUI']);
   frm := TForm.Create(nil);
     frm.Caption := Lang.Values['sTitle'];
     frm.Width := 700;
@@ -724,6 +762,30 @@ begin
     
     
     frm.ShowModal;
+    
+    if frm.ModalResult = mrOk then
+    begin
+      for i := 0 to Pred(slWorldSpace.Count) do
+      begin
+        for j := 0 to Pred(arrayTownLocations[i].Count) do
+        begin
+          iniAssetPaths.WriteString(slWorldSpace[i], arrayTownLocations[i].Strings[j], arrayTownPaths[i,j]);
+          iniEnabledLocations.WriteString(slWorldSpace[i], arrayTownLocations[i].Strings[j], BoolToStr(cbMasterLocations[i,j].Checked));
+        end;
+      end;
+      
+      //Debug
+      for i := 0 to Pred(slDebug.Count) do
+        iniSettings.WriteString('Debug', slDebug.Names[i], BoolToStr(cbDebug[i].Checked));
+        
+      //Options
+      for i := 0 to Pred(slOptions.Count) do
+        iniSettings.WriteString('Options', slOptions.Names[i], BoolToStr(cbOptions[i].Checked));
+      
+      iniAssetPaths.UpdateFile;
+      iniSettings.UpdateFile;
+      iniEnabledLocations.UpdateFile;
+    end;
   frm.Free;  
 end;
 
@@ -739,6 +801,8 @@ begin
   picReset.Free;
   slDebug.Free;
   slWorldSpace.Free;
+  iniAssetPaths.Free;
+  iniEnabledLocations.Free;
 
   for i := 0 to Pred(Length(arrayTownLocations)) do
     arrayTownLocations[i].Free;

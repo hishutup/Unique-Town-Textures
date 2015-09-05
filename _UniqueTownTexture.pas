@@ -59,6 +59,7 @@ const
   cTexturesPath=DataPath+'textures\UTT\';
   cPatchFile='UniqueTownTextures.esp';
   cUpdateNumber=10000;//store in ini
+  cRecuriveDepth=6;
   
   cDashes='------------------------------------------------------------------------------------------';
   cBethesdaFiles='Skyrim.esm,Update.esm,Dawnguard.esm,HearthFires.esm,Dragonborn.esm';
