@@ -1,0 +1,8 @@
+Skyrim.esm=3328572758
+Skyrim.Hardcoded.keep.this.with.the.exe.and.otherwise.ignore.it.I.really.mean.it.dat=0
+Update.esm=3853941722
+Unofficial Skyrim Patch.esp=703367028
+Dawnguard.esm=3178417395
+HearthFires.esm=2944585322
+Dragonborn.esm=2851617791
+Thunderchild - Epic Shout Package.esp=705547632

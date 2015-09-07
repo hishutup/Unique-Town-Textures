@@ -22,6 +22,10 @@ sDiscard=Discard
 sSave=Save
 sInvalidPath=Invalid Path or Empty Path
 sSelectDir=Select a directory
+sForcedOptions=Force Regeneration options
 
 sFailedOnRefeshINI=Something went wrong when trying to deleting: 
 sSelectAtLeasetOneLocation=You MUST select at least one location to process the location(s)
+
+sScaningFormIDs=Scanning for FormIDs
+sFileIsComprimised= is comprimised, regenerating all FormIDs for all Files.

@@ -67,14 +67,17 @@ const
   
   cEnabledLocationsFile=cWorkingPath+'Settings\EnabledLocations.ini';
   cLangFile=cWorkingPath+'Assets\english.lang';
+  cCacheFormIDsPath=cWorkingPath+'cache\';
+  
   cGeneralSettings=cWorkingPath+'Settings\General.ini';
-  cTextureCacheFile=cWorkingPath+'Cache\TextureCache.ini';
-  cCacheCheckSumFile=cWorkingPath+'Cache\FileCheckSums.txt';
-  cCacheFormIDsFile=cWorkingPath+'Cache\FormIDs.ini';
+  cCacheTextureFile=cWorkingPath+'Settings\TextureCache.ini';
+  cPluginChecksumsFile=cWorkingPath+'Settings\FileChecksums.txt';
+  cFormIDsChecksumsFile=cWorkingPath+'Settings\FormIDsCacheChecksums.txt';
   cTexturePathsFile=cWorkingPath+'Settings\TexturePaths.ini';
   cCellRulesPath=cWorkingPath+'Rules\';
   
   cOptionsNames='doInteriors,doParallax';
+  cForcedNames='ForceFormIDsCache';
   cDebugNames='doDebug,doDebugGeneral,doDebugGUI,doDebugPrepare,doDebugFindInteriors';
   cRequiredAssets='Gear.png,Folder.png,Undo.png,Error.png,Check.png,Reset.png';
   
@@ -105,8 +108,9 @@ begin
   FindClose(recRules);
   
   CreateFileIfMissing(cGeneralSettings);
-  CreateFileIfMissing(cCacheCheckSumFile);
-  CreateFileIfMissing(cCacheFormIDsFile);
+  CreateFileIfMissing(cPluginChecksumsFile);
+  CreateFileIfMissing(cFormIDsChecksumsFile);
+  CreateFileIfMissing(cCacheTextureFile);
   
   slAssets := TStringList.Create;
   for i := 0 to Pred(slAssets.Count) do
@@ -121,6 +125,7 @@ begin
   
   //Update Ini
   UpdateSettingsBool(iniSettings,'Options', cOptionsNames);
+  UpdateSettingsBool(iniSettings, 'Forced', cForcedNames);
   UpdateSettingsBool(iniSettings,'Debug', cDebugNames);
   
 end;

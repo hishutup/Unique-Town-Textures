@@ -6,7 +6,7 @@ begin
     if not FileExists(sFilePath) then
     begin
       CreateDirectories(sFilePath);
-      FileCreate(sFilePath);
+      FileClose(FileCreate(sFilePath));
     end;
   except
     on x: exception do
@@ -14,7 +14,21 @@ begin
   end;
 end;
 
-procedure UpdateSettingsBool(ini: TMemIniFile; sSec, sValue: String);
+function FileFromPath(sFilePath: string): string;
+var
+  i: int;
+begin
+  for i := Length(sFilePath) downto 0 do
+  begin
+    if Copy(sFilePath, i , 1) = '\' then
+    begin
+      Result := Copy(sFilePath, i+1, Length(sFilePath));
+      break;
+    end;
+  end;
+end;
+
+procedure UpdateSettingsBool(var ini: TMemIniFile; sSec, sValue: String);
 var
   slNew, slOld: TStringList;
   i: Int;

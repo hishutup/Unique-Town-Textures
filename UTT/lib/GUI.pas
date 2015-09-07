@@ -1,9 +1,7 @@
 unit GUI;
-uses mteFunctions;
-uses 'UTT\lib\FileHandling';
   
 var
-  slDebug, slOptions: TStringList;
+  slDebug, slForced, slOptions: TStringList;
   bDoDebugGUI, bBusy: Boolean;
   sTextureAssetsList: String;
   picGear, picFolder, picUndo, picError, picCheck, picReset: TPicture;
@@ -71,7 +69,9 @@ procedure Startup;
 var
   i: int;
 begin
+  slWorldSpace := TStringList.Create;
   slDebug := TStringList.Create;
+  slForced := TStringList.Create;
   slOptions := TStringList.Create;
   picGear := TPicture.Create;
   picFolder := TPicture.Create;
@@ -83,7 +83,6 @@ begin
   iniAssetPaths := TMemIniFile.Create(cTexturePathsFile);
   iniEnabledLocations := TMemIniFile.Create(cEnabledLocationsFile);
   
-  slWorldSpace := TStringList.Create;
   for i := 0 to Pred(Length(arrayTownLocations)) do
     arrayTownLocations[i] := TStringList.Create;
 end;
@@ -92,6 +91,7 @@ procedure LoadSettings;
 begin
   bDoDebugGUI := StrToBool(iniSettings.ReadString('Debug', 'doDebugGUI', 'False'));
   iniSettings.ReadSectionValues('Debug',slDebug);
+  iniSettings.ReadSectionValues('Forced',slForced);
   iniSettings.ReadSectionValues('Options',slOptions);
   
   //Load Assets
@@ -665,14 +665,14 @@ var
   i,j: int;
   
   frm: TForm;
-  gbWindow, gbDetails, gbLocations, gbOptions, gbDebug: TGroupBox;
+  gbWindow, gbDetails, gbLocations, gbOptions, gbForced, gbDebug: TGroupBox;
   lblTitle, lblDebug: TLabel;
   sbLocations: TScrollBox;
   btnRun, btnCancel, btnCheckAll, btnUncheckAll: TButton;
   imgOptions: TImage;
   
   cbOptions: Array[0..255] of TCheckBox;
-  
+  cbForced: Array[0..255] of TCheckBox;
   cbDebug: Array[0..255] of TCheckBox;
 begin
   
@@ -724,8 +724,12 @@ begin
     for i := 0 to Pred(slOptions.Count) do 
       cbOptions[i] := cCheckBox(gbOptions, gbOptions, (i*20)+20, 20, 150, slOptions.Names[i], StrToBool(slOptions.ValueFromIndex[i]), '');
     
+    gbForced := cGroup(frm, gbWindow, gbOptions.Top+gbOptions.Height+35, gbOptions.Left, (20*(slForced.Count))+45, gbLocations.Width, Lang.Values['sForcedOptions'], '');
+    for i := 0 to Pred(slForced.Count) do
+      cbForced[i] := cCheckBox(gbForced, gbForced, (i*20)+20, 20, 150, slForced.Names[i], StrToBool(slForced.ValueFromIndex[i]), '');
+      
     //Debug box
-    gbDebug := cGroup(frm, gbWindow, gbOptions.Top+gbOptions.Height+35, gbOptions.Left, (20*(slDebug.Count))+60, gbLocations.Width, Lang.Values['sDebugOptions'], '');
+    gbDebug := cGroup(frm, gbWindow, gbForced.Top+gbForced.Height+35, gbOptions.Left, (20*(slDebug.Count))+60, gbLocations.Width, Lang.Values['sDebugOptions'], '');
     lblDebug := cLabel(gbDebug, gbDebug, 20, 5, 15, gbDebug.Width-30, Lang.Values['sSomeDebugRunOnStart'], '');
     for i := 0 to Pred(slDebug.Count) do
     begin
@@ -772,6 +776,10 @@ begin
       for i := 0 to Pred(slDebug.Count) do
         iniSettings.WriteString('Debug', slDebug.Names[i], BoolToStr(cbDebug[i].Checked));
         
+      //Forced
+      for i := 0 to Pred(slForced.Count) do
+        iniSettings.WriteString('Forced', slForced.Names[i], BoolToStr(cbForced[i].Checked));
+        
       //Options
       for i := 0 to Pred(slOptions.Count) do
         iniSettings.WriteString('Options', slOptions.Names[i], BoolToStr(cbOptions[i].Checked));
@@ -797,6 +805,8 @@ begin
   picCheck.Free;
   picReset.Free;
   slDebug.Free;
+  slOptions.Free;
+  slForced.Free;
   slWorldSpace.Free;
   iniAssetPaths.Free;
   iniEnabledLocations.Free;
